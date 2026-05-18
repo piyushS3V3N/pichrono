@@ -1,6 +1,7 @@
 #include "pichrono.h"
 #include "filehandler.h"
 #include "utils.h"
+#include "piqme.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,27 +36,27 @@ static void write_object(const char *sha_hex, const char *data, size_t size) {
     snprintf(path, sizeof(path), "%s/%s", dir, sha_hex + 2);
     filehandler_mkdir_p(dir);
     
-    char *compressed;
-    size_t comp_size;
-    if (compress_data(data, size, &compressed, &comp_size) == 0) {
-        filehandler_write_all(path, compressed, comp_size);
-        free(compressed);
+    char *encrypted;
+    size_t enc_size;
+    if (piqme_encrypt(data, size, &encrypted, &enc_size) == 0) {
+        filehandler_write_all(path, encrypted, enc_size);
+        free(encrypted);
     }
 }
 
 char* read_object(const char *sha_hex, size_t *out_size) {
     char path[256];
     snprintf(path, sizeof(path), ".pichrono/objects/%.2s/%s", sha_hex, sha_hex + 2);
-    size_t comp_size;
-    char *compressed = filehandler_read_all(path, &comp_size);
-    if (!compressed) return NULL;
+    size_t enc_size;
+    char *encrypted = filehandler_read_all(path, &enc_size);
+    if (!encrypted) return NULL;
 
-    char *decompressed;
-    if (decompress_data(compressed, comp_size, &decompressed, out_size) == 0) {
-        free(compressed);
-        return decompressed;
+    char *decrypted;
+    if (piqme_decrypt(encrypted, enc_size, &decrypted, out_size) == 0) {
+        free(encrypted);
+        return decrypted;
     }
-    free(compressed);
+    free(encrypted);
     return NULL;
 }
 
